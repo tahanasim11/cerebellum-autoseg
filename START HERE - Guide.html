@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cerebellum AutoSeg Guide</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --panel: #ffffff; --ink: #1f2328; --muted: #5b636d; --line: #e3e0d8;
+    --accent: #1e5aa8; --accent-soft: #e8f0fb; --warn: #8a5a00; --warn-soft: #fff6e0;
+    --ok: #1d6b3a; --ok-soft: #e7f5ec; --code: #f3f1ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181b; --panel: #1e2125; --ink: #e8e6e1; --muted: #a3a9b1; --line: #33373d;
+      --accent: #7fb0ff; --accent-soft: #1d2a3d; --warn: #f0c060; --warn-soft: #33290f;
+      --ok: #7fd49a; --ok-soft: #15301f; --code: #2a2d32;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 44px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p, li { max-width: 72ch; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .step { display: inline-block; background: var(--accent); color: #fff; border-radius: 999px;
+          font-size: 13px; font-weight: 600; padding: 2px 10px; margin-right: 8px; vertical-align: 2px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 14px 0; }
+  .note { background: var(--accent-soft); border-color: transparent; }
+  .warn { background: var(--warn-soft); border-color: transparent; }
+  .ok { background: var(--ok-soft); border-color: transparent; }
+  .box > :first-child { margin-top: 0; } .box > :last-child { margin-bottom: 0; }
+  code, kbd { font-family: Consolas, "Cascadia Mono", monospace; font-size: 14px;
+              background: var(--code); border-radius: 5px; padding: 1px 6px; }
+  kbd { border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+  ol li, ul li { margin: 4px 0; }
+  .toc a { color: var(--accent); text-decoration: none; } .toc a:hover { text-decoration: underline; }
+  .toc ol { columns: 2; column-gap: 32px; padding-left: 20px; }
+  @media (max-width: 640px) { .toc ol { columns: 1; } h1 { font-size: 25px; } }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Cerebellum AutoSeg</h1>
+<p class="sub">A rough cerebellum mask for every MRI, made automatically on your own computer, ready for you to check and fix in ITK-SNAP. No coding needed: you only double-click files.</p>
+
+<div class="box ok">
+<p><strong>Your scans never leave this computer.</strong> The setup downloads software from the internet once. After that, all processing runs locally, and it works offline.</p>
+</div>
+
+<div class="box toc">
+<strong>Contents</strong>
+<ol>
+  <li><a href="#what">What this does</a></li>
+  <li><a href="#before">Before you start</a></li>
+  <li><a href="#setup">Step 1: One-time setup</a></li>
+  <li><a href="#run">Step 2: Segment a scan</a></li>
+  <li><a href="#review">Step 3: Review and fix in ITK-SNAP</a></li>
+  <li><a href="#compare">Step 4: Test it against your manual segmentation</a></li>
+  <li><a href="#today">A good first session</a></li>
+  <li><a href="#many">Running many scans later</a></li>
+  <li><a href="#files">What gets created, and where</a></li>
+  <li><a href="#trouble">Troubleshooting</a></li>
+  <li><a href="#limits">Limits and how to describe this in a paper</a></li>
+  <li><a href="#uninstall">Uninstalling</a></li>
+</ol>
+</div>
+
+<h2 id="what">1. What this does</h2>
+<p>For each MRI you pick, the kit:</p>
+<ol>
+  <li>runs <strong>SynthSeg-robust 2.0</strong>, a published, validated brain segmentation model that works on any MRI contrast and resolution and is built to cope with clinical scans;</li>
+  <li>takes the four cerebellum labels it produces (left and right cerebellar cortex and white matter) and merges them into <strong>one label (Label 1)</strong>;</li>
+  <li>saves that mask on <strong>exactly the same grid as your scan</strong>, so it lines up perfectly when you open it in ITK-SNAP.</li>
+</ol>
+<p>You then review the mask and correct it, which should be much faster than tracing from scratch. The mask is a draft, not a final answer. Every mask still needs your review.</p>
+
+<h2 id="before">2. Before you start</h2>
+<table>
+  <tr><th>You need</th><th>How to check</th></tr>
+  <tr><td>Windows 10 or 11</td><td>Almost certainly yes on a university PC.</td></tr>
+  <tr><td>At least 8 GB of memory (16 GB or more is better)</td><td>Start menu &gt; Settings &gt; System &gt; About &gt; <em>Installed RAM</em>.</td></tr>
+  <tr><td>About 3 GB of free disk space</td><td>File Explorer &gt; This PC &gt; look at drive C:.</td></tr>
+  <tr><td>Internet, for the setup only</td><td>The setup downloads about 1 GB.</td></tr>
+  <tr><td>ITK-SNAP installed</td><td>You already use it.</td></tr>
+</table>
+<p>No graphics card (GPU) is needed. Everything runs on the normal processor.</p>
+
+<h2 id="setup"><span class="step">Step 1</span>One-time setup</h2>
+<ol>
+  <li>Open the <code>CerebellumAutoSeg</code> folder (wherever you saved or extracted it).</li>
+  <li>Double-click <code>1_SETUP (run once).bat</code>. A black window opens.</li>
+  <li>If Windows shows a blue box saying <em>"Windows protected your PC"</em>, click <strong>More info</strong>, then <strong>Run anyway</strong>. This appears for any new script file and is expected. (If you downloaded the kit as a ZIP, you can avoid this by right-clicking the ZIP before extracting, choosing <strong>Properties</strong>, ticking <strong>Unblock</strong> and clicking <strong>OK</strong>.)</li>
+  <li>Wait. You will see steps <code>[1/5]</code> to <code>[5/5]</code>. Step 3 (TensorFlow) is the slowest. The whole setup usually takes 5 to 20 minutes.</li>
+  <li>When you see <strong>SETUP COMPLETE</strong>, press any key to close the window.</li>
+</ol>
+<div class="box note">
+<p>If anything fails (for example the internet drops), just double-click the setup file again. Finished steps are skipped, so it continues where it stopped.</p>
+</div>
+
+<h2 id="run"><span class="step">Step 2</span>Segment a scan</h2>
+<ol>
+  <li>Double-click <code>2_RUN on my scans.bat</code>.</li>
+  <li>A file window opens. Go to your scan and select the <strong>MRI itself</strong> (the <code>.nii.gz</code> file), not a segmentation. To do several scans in one go, hold <kbd>Ctrl</kbd> while clicking them.</li>
+  <li>Click <strong>Open</strong> and wait. Each scan usually takes <strong>1 to 10 minutes</strong>. You will see <em>"SynthSeg pass 1 is running"</em>. Sometimes a second pass runs; that is normal (it re-centres on the cerebellum).</li>
+  <li>When it finishes, it prints where the mask was saved, for example:<br>
+      <code>Saved: ...\Downloads\patient01_T1_cerebellum_auto.nii.gz</code></li>
+  <li>It asks <em>"Open the scan and its new mask in ITK-SNAP now?"</em>. Press <kbd>Enter</kbd> (or type <kbd>Y</kbd>) to open both in ITK-SNAP automatically.</li>
+</ol>
+<div class="box note">
+<p><strong>Shortcut:</strong> you can also drag one or more scan files onto <code>2_RUN on my scans.bat</code> instead of using the file window.</p>
+</div>
+
+<h2 id="review"><span class="step">Step 3</span>Review and fix in ITK-SNAP</h2>
+<p>If ITK-SNAP did not open automatically: <strong>File &gt; Open Main Image</strong> and choose the scan, then <strong>Segmentation &gt; Open Segmentation</strong> and choose the <code>..._cerebellum_auto.nii.gz</code> file. The cerebellum appears in red (Label 1).</p>
+
+<h3>A simple review routine</h3>
+<ol>
+  <li>Scroll through the <strong>axial</strong> view from the top of the cerebellum to the bottom, slice by slice (mouse wheel, or the <kbd>Up</kbd> / <kbd>Down</kbd> arrow keys).</li>
+  <li>Then check the <strong>sagittal</strong> and <strong>coronal</strong> views, especially the midline.</li>
+  <li>In the 3D view (click <strong>Update</strong> there if it is shown), look at the mask as a 3D shape. Holes, spikes or odd bumps stand out there.</li>
+  <li>Use the <strong>label opacity</strong> slider to make the red mask more see-through when judging edges.</li>
+</ol>
+
+<h3>How to fix mistakes</h3>
+<ul>
+  <li>Choose the <strong>Paintbrush</strong> tool from the main toolbar. Make sure the active label is <strong>Label 1</strong>.</li>
+  <li><strong>Left-click and drag</strong> to add cerebellum. <strong>Right-click and drag</strong> to erase.</li>
+  <li>Change the brush size in the Paintbrush inspector on the left. For long edges, the <strong>Polygon</strong> tool is often faster.</li>
+</ul>
+
+<h3>Where the draft is most often wrong</h3>
+<table>
+  <tr><th>Area</th><th>What to look for</th></tr>
+  <tr><td>Brainstem border (cerebellar peduncles)</td><td>Mask creeping into the pons or medulla, or stopping short.</td></tr>
+  <tr><td>Top surface (tentorium)</td><td>Leaks into the occipital lobe above, or missing the top of the cerebellum.</td></tr>
+  <tr><td>Bottom (tonsils, near the foramen magnum)</td><td>Tonsils cut off or extended too low.</td></tr>
+  <tr><td>Flocculus (small lobule beside the brainstem)</td><td>Often missed or partly included.</td></tr>
+  <tr><td>Fourth ventricle</td><td>The model leaves it <em>out</em> of the cerebellum. Add it if your protocol includes it.</td></tr>
+  <tr><td>Nearby veins and sinuses</td><td>Bright vessels next to the cerebellum wrongly included.</td></tr>
+  <tr><td>Abnormal anatomy (lesions, malformations, very young children)</td><td>Check the whole mask carefully. These cases need the most correction.</td></tr>
+</table>
+
+<h3>Save your corrected mask</h3>
+<p><strong>Segmentation &gt; Save Segmentation Image As...</strong> and give it a new name, for example <code>patient01_T1_cerebellum_corrected.nii.gz</code>. Keep the <code>_auto</code> file unchanged. Using the same naming pattern every time will make it easy to train a custom model on your corrected masks later.</p>
+
+<h2 id="compare"><span class="step">Step 4</span>Test it against your manual segmentation</h2>
+<p>This tells you how close the automatic draft is to your own careful work, using a scan you have already segmented by hand.</p>
+<ol>
+  <li>First run Step 2 on that scan, so its <code>_cerebellum_auto.nii.gz</code> file exists.</li>
+  <li>Double-click <code>3_COMPARE with my manual segmentation.bat</code>.</li>
+  <li>Window 1: pick the <strong>MRI scan</strong>. Its auto mask is found automatically.</li>
+  <li>Window 2: pick <strong>your manual segmentation</strong> of that scan.</li>
+  <li>Read the results in the black window. They are also saved to <code>CerebellumAutoSeg_comparisons.csv</code> next to the scan.</li>
+  <li>Press <kbd>Enter</kbd> to open the scan with a colour-coded <strong>difference map</strong> in ITK-SNAP.</li>
+</ol>
+
+<h3>Reading the numbers</h3>
+<table>
+  <tr><th>Measure</th><th>Meaning</th></tr>
+  <tr><td>Dice overlap</td><td>0 to 1. Above 0.90 means the draft is very close to your manual work. 0.85 to 0.90 usually means a consistent boundary difference worth looking at.</td></tr>
+  <tr><td>Auto volume vs manual (%)</td><td>Positive: the draft is bigger than yours. Negative: smaller.</td></tr>
+  <tr><td>Mean surface distance</td><td>How far apart the two outlines are on average, in mm.</td></tr>
+  <tr><td>95% Hausdorff distance</td><td>The size of the worst disagreements, in mm (ignoring the most extreme 5%).</td></tr>
+</table>
+
+<h3>Reading the difference map</h3>
+<p><span class="swatch" style="background:#ff0000"></span><strong>Red</strong> = both agree &nbsp;&nbsp;
+   <span class="swatch" style="background:#00c000"></span><strong>Green</strong> = only the auto mask (extra) &nbsp;&nbsp;
+   <span class="swatch" style="background:#0050ff"></span><strong>Blue</strong> = only your manual mask (missed by auto)</p>
+<p>Optional: to see these names in ITK-SNAP, use <strong>Segmentation &gt; Import Label Descriptions</strong> and pick <code>difference_map_labels.txt</code> from the same folder.</p>
+<div class="box note">
+<p>If the green or blue areas follow a consistent pattern (for example the draft always leaves out the fourth ventricle, which your protocol includes), share the comparison numbers and a description of the pattern with whoever is helping you. Do not share the scans themselves. The kit can be adjusted to match your protocol.</p>
+</div>
+
+<h2 id="today">7. A good first session</h2>
+<ol>
+  <li>Run <strong>Step 1</strong> (setup) once.</li>
+  <li>Pick one scan you have <strong>already segmented by hand</strong> and one you have <strong>not</strong>. Run <strong>Step 2</strong> and select both at once (hold <kbd>Ctrl</kbd>).</li>
+  <li>On the scan you already segmented: run <strong>Step 4</strong> to see how close the draft is to your work.</li>
+  <li>On the new scan: do <strong>Step 3</strong>. Review, fix and save as <code>..._cerebellum_corrected.nii.gz</code>. Note roughly how long the fixing took compared with tracing from scratch.</li>
+</ol>
+
+<h2 id="many">8. Running many scans later</h2>
+<ul>
+  <li>In Step 2, select all scans in a folder at once (click one, then press <kbd>Ctrl</kbd>+<kbd>A</kbd>). They are processed one after another; you can leave the computer running.</li>
+  <li>If one scan fails, the others still run. The window tells you which one failed and why.</li>
+  <li>A log, <code>CerebellumAutoSeg_log.csv</code>, records every scan, its draft volume and any warnings. Open it in Excel.</li>
+  <li>Once you have about 20 to 50 corrected masks, they can be used to train a model that learns your exact protocol (nnU-Net), so later drafts need even fewer fixes.</li>
+</ul>
+
+<h2 id="files">9. What gets created, and where</h2>
+<div class="table-wrap">
+<table>
+  <tr><th>File or folder</th><th>Where</th><th>What it is</th></tr>
+  <tr><td><code>CerebellumAutoSeg</code></td><td>Wherever you saved it</td><td>This kit: the three .bat files, this guide, and a <code>tools</code> folder.</td></tr>
+  <tr><td><code>CerebSeg</code></td><td><code>C:\Users\&lt;you&gt;\AppData\Local\</code></td><td>The installed software and model (about 2 GB). Also holds technical logs in <code>logs</code>.</td></tr>
+  <tr><td><code>&lt;scan&gt;_cerebellum_auto.nii.gz</code></td><td>Next to each scan</td><td>The automatic draft mask (Label 1 = cerebellum).</td></tr>
+  <tr><td><code>CerebellumAutoSeg_log.csv</code></td><td>Next to the scans</td><td>One row per scan processed.</td></tr>
+  <tr><td><code>&lt;scan&gt;_auto_vs_manual_difference.nii.gz</code></td><td>Next to the scan</td><td>Colour-coded comparison (Step 4).</td></tr>
+  <tr><td><code>CerebellumAutoSeg_comparisons.csv</code></td><td>Next to the scan</td><td>Comparison results (Step 4).</td></tr>
+</table>
+</div>
+<p>Existing files are never overwritten. If a file name is taken, <code>_2</code>, <code>_3</code> and so on are added.</p>
+
+<h2 id="trouble">10. Troubleshooting</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>"Windows protected your PC"</td><td>Click <strong>More info</strong>, then <strong>Run anyway</strong>.</td></tr>
+  <tr><td>Setup says a download failed</td><td>Run setup again. On a university network, a VPN or firewall can block downloads; try again on a different network if it keeps failing.</td></tr>
+  <tr><td>Setup check mentions "DLL" or "Visual C++"</td><td>Ask IT to install the free <em>Microsoft Visual C++ Redistributable (x64)</em>, then run setup again.</td></tr>
+  <tr><td>"Setup has not been run yet"</td><td>Run <code>1_SETUP (run once).bat</code> first, and wait for SETUP COMPLETE.</td></tr>
+  <tr><td>"ran out of memory" or the run stops suddenly</td><td>Close browsers, Teams and Outlook, then run again. The kit automatically uses less memory on computers with less than 11 GB.</td></tr>
+  <tr><td>"This file looks like a segmentation"</td><td>You picked a mask instead of the MRI. Pick the scan itself.</td></tr>
+  <tr><td>"did not find any cerebellum"</td><td>Check that the scan is a brain MRI and includes the back of the head (posterior fossa).</td></tr>
+  <tr><td>Warning: "the cerebellum reaches the edge"</td><td>The scan may cut off part of the cerebellum. Check those edges carefully.</td></tr>
+  <tr><td>ITK-SNAP does not open automatically</td><td>Open it yourself and load the files as described in Step 3.</td></tr>
+  <tr><td>ITK-SNAP says the segmentation size does not match</td><td>Make sure you opened the matching scan. The mask is always made on the grid of the scan you selected.</td></tr>
+  <tr><td>No file window appears</td><td>Drag the scan files onto <code>2_RUN on my scans.bat</code> instead.</td></tr>
+</table>
+<p>When asking for help, send a screenshot of the black window. If needed, also send the newest file from <code>C:\Users\&lt;you&gt;\AppData\Local\CerebSeg\logs</code>. Logs contain file names and technical messages, never image data.</p>
+
+<h2 id="limits">11. Limits and how to describe this in a paper</h2>
+<ul>
+  <li><strong>Research use only.</strong> Not for clinical decisions.</li>
+  <li>SynthSeg's cerebellum is cerebellar cortex plus cerebellar white matter. It excludes the brainstem and the fourth ventricle. Your lab's definition may differ; Step 4 shows how much.</li>
+  <li>SynthSeg was trained on adult anatomy but is designed to be robust to contrast, resolution and scanner differences. It often works well in children, but expect more corrections in very young children and in abnormal anatomy. That is why every mask is reviewed.</li>
+  <li>All masks used in analyses should be the reviewed, corrected versions.</li>
+</ul>
+<h3>Suggested methods wording</h3>
+<div class="box">
+<p>"Cerebellar masks were pre-segmented automatically with SynthSeg-robust 2.0 (Billot et al., 2023), merging the left and right cerebellar cortex and white matter labels, and resampled to native image space. Every mask was then reviewed and manually corrected in ITK-SNAP by a trained rater."</p>
+</div>
+<h3>References</h3>
+<ul>
+  <li>Billot B, Greve DN, Puonti O, et al. SynthSeg: Segmentation of brain MRI scans of any contrast and resolution without retraining. <em>Medical Image Analysis</em>. 2023;86:102789.</li>
+  <li>Billot B, Magdamo C, Cheng Y, Arnold SE, Das S, Iglesias JE. Robust machine learning segmentation for large-scale analysis of heterogeneous clinical brain MRI datasets. <em>PNAS</em>. 2023;120(9):e2216399120.</li>
+  <li>Yushkevich PA, Piven J, Hazlett HC, et al. User-guided 3D active contour segmentation of anatomical structures. <em>NeuroImage</em>. 2006;31(3):1116-1128. (ITK-SNAP)</li>
+</ul>
+
+<h2 id="uninstall">12. Uninstalling</h2>
+<p>Delete the folder <code>C:\Users\&lt;you&gt;\AppData\Local\CerebSeg</code> (paste <code>%LOCALAPPDATA%</code> into the File Explorer address bar to get there) and the <code>CerebellumAutoSeg</code> kit folder. Nothing else was installed or changed. Your masks and logs next to your scans stay where they are.</p>
+
+</main>
+</body>
+</html>
